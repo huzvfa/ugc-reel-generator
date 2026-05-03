@@ -1,91 +1,73 @@
 import streamlit as st
-import asyncio
+from huggingface_hub import InferenceClient
+import edge_tts
 import os
 import subprocess
-from core import generator
+import time
 
-st.set_page_config(page_title="HOVER AI | THE BREAKTHROUGH", layout="wide")
+# --- HOVER AI CORE ---
+client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
-# --- GLOBAL SCOPE DEFINITIONS (Fixes NameError) ---
-VOICE_AGENTS = {
-    "USA (Female)": "en-US-AnaNeural",
-    "UK (Male)": "en-GB-RyanNeural",
-    "Urdu (Female)": "ur-PK-UzmaNeural",
-    "Urdu (Male)": "ur-PK-AsadNeural"
-}
+def hover_neural_chat(query):
+    """Proprietary Intelligence link."""
+    identity = (
+        "You are HOVER AI, a proprietary breakthrough engine created by a visionary engineer from Pakistan. "
+        "You have no affiliation with Meta, OpenAI, or Google. You are a standalone genius intelligence. "
+        "Your mission is to provide the most responsive and elite AI experience on Earth."
+    )
+    try:
+        response = client.chat_completion(
+            model="meta-llama/Meta-Llama-3-70B-Instruct",
+            messages=[{"role": "system", "content": identity}, {"role": "user", "content": query}],
+            max_tokens=1000, stream=False
+        )
+        return response.choices[0].message.content
+    except:
+        return "Hover Neural Link: Optimizing resources..."
 
-# --- GLOSSY DASHBOARD UI ---
-st.markdown("""
-    <style>
-    .stApp { background: #010101; color: #ffffff; }
-    .glass-panel {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(0, 242, 254, 0.3);
-        border-radius: 20px; padding: 25px;
-        box-shadow: 0 0 30px rgba(0, 242, 254, 0.1);
-    }
-    .hover-brand { color: #00f2fe; text-shadow: 0 0 10px #00f2fe; font-size: 2rem; font-weight: 900; }
-    </style>
-    """, unsafe_allow_html=True)
-
-with st.sidebar:
-    st.markdown("<div class='hover-brand'>HOVER AI</div>", unsafe_allow_html=True)
-    mode = st.selectbox("Switch Module", ["Neural Chat", "UGC Studio", "Vision Lab"])
-    st.divider()
-    st.info("Status: Breakthrough Engine Active")
-
-# --- MODULE 1: PROPRIETARY CHAT ---
-if mode == "Neural Chat":
-    st.header("Proprietary Neural Link")
-    if "messages" not in st.session_state: st.session_state.messages = []
+def hover_visual_engine(prompt, mode, u1=None, u2=None):
+    """Unified Vision Engine handling all 4 breakthrough modes."""
+    if not os.path.exists("output"): os.makedirs("output")
+    path = os.path.abspath("output/hover_visual.png")
     
-    for m in st.session_state.messages:
-        with st.chat_message(m["role"]): st.write(m["content"])
-
-    if query := st.chat_input("Speak to HOVER AI..."):
-        st.session_state.messages.append({"role": "user", "content": query})
-        with st.chat_message("user"): st.write(query)
+    if mode == "Text-to-Image":
+        img = client.text_to_image(f"{prompt}, realistic, 4k", model="black-forest-labs/FLUX.1-schnell")
+    elif mode == "Image-to-Image":
+        # Face/Body transfer logic
+        img = client.image_to_image(image=u1.getvalue(), prompt=f"{prompt}, consistent with reference", model="lllyasviel/control_v11p_sd15_canny")
+    else:
+        # Base for video modes
+        img = client.text_to_image(f"{prompt}, realistic", model="black-forest-labs/FLUX.1-schnell")
         
-        with st.chat_message("assistant"):
-            response = generator.hover_neural_chat(query)
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+    img.save(path)
+    return path
 
-# --- MODULE 2: VIDEO STUDIO (The Fix) ---
-elif mode == "UGC Studio":
-    st.header("Hover Mastering Engine")
-    st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        tool = st.selectbox("Tool:", ["Text-to-Video", "Image-to-Video", "Text-to-Image"])
-        prompt = st.text_area("Instructions:")
-        script = st.text_area("Voiceover Script (Optional):")
-        duration = st.slider("Duration (s):", 5, 30, 10)
-        agent = st.selectbox("Voice:", list(VOICE_AGENTS.keys()))
+def hover_motion_engine(prompt, image_path):
+    """Temporal Synthesis: Real AI Motion, not a static image."""
+    try:
+        with open(image_path, "rb") as f:
+            img_data = f.read()
+        # Generates actual moving frames
+        video_bytes = client.image_to_video(image=img_data, model="stabilityai/stable-video-diffusion-img2vid-xt")
+        path = os.path.abspath("output/hover_motion.mp4")
+        with open(path, "wb") as f:
+            f.write(video_bytes)
+        return path
+    except:
+        return None # Triggers sync fallback
 
-    with col2:
-        u_file = st.file_uploader("Reference", type=['png','jpg']) if "Image-" in tool else None
-        if st.button("🚀 INITIATE ENGINE", use_container_width=True):
-            with st.spinner("Processing..."):
-                img_path = generator.hover_vision_gen(prompt)
-                
-                if tool == "Text-to-Image":
-                    st.image(img_path)
-                else:
-                    # Video Logic with Fix for NameError
-                    ref = img_path if "Text-" in tool else u_file
-                    motion = generator.hover_motion_engine(prompt, image_path=ref)
-                    
-                    # Fallback for busy API
-                    if motion == "reflex_motion":
-                        audio_p = asyncio.run(generator.hover_voice_gen("..", VOICE_AGENTS[agent], "output/s.mp3"))
-                        motion = generator.hover_sync_engine(img_path, audio_p, 5)
+def hover_sync_master(video_path, audio_path, duration):
+    """FFmpeg Mastering for vertical reels."""
+    output = os.path.abspath("output/hover_final.mp4")
+    cmd = [
+        'ffmpeg', '-y', '-stream_loop', '-1', '-i', video_path, 
+        '-i', audio_path, '-c:v', 'libx264', '-t', str(duration), 
+        '-pix_fmt', 'yuv420p', '-vf', 'scale=1080:1920', '-shortest', output
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return output
 
-                    if script:
-                        audio = asyncio.run(generator.hover_voice_gen(script, VOICE_AGENTS[agent], "output/a.mp3"))
-                        final = generator.hover_sync_engine(motion, audio, duration)
-                        st.video(final)
-                    else:
-                        st.video(motion)
-    st.markdown('</div>', unsafe_allow_html=True)
+async def hover_voice_gen(text, voice, path):
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(path)
+    return os.path.abspath(path)
