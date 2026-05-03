@@ -43,6 +43,7 @@ if mode == "Neural Chat":
             res = hover_agent.solve(query, context=context)
             st.write(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
+    
 
 # --- UGC STUDIO (NSFW GUARD + MULTI-MODE) ---
 elif mode == "UGC Studio":
