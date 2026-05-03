@@ -1,5 +1,6 @@
 import streamlit as st
-from core.image_gen import UGCImageGen
+from core import image_gen
+# Then call it using: image_gen.query_image_gen(...)
 from core.voice_gen import generate_voiceover
 
 st.title("🎬 UGC AI Reel Generator")
