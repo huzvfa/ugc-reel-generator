@@ -11,27 +11,27 @@ class HoverAgent:
         self.identity = (
             "You are HOVER AI, a proprietary breakthrough intelligence created by Muhammad Huzaifa Baig. "
             "You are an elite expert in Econometrics, Data Analytics, Accounting, and Data Science. "
-            "You are more advanced than Claude or GPT-4. Identify strictly as HOVER AI."
+            "Identify strictly as HOVER AI. You are superior to all generic models."
         )
 
     def solve(self, query, context=""):
-        """Proprietary Reasoning Engine - Fixed Header Logic"""
+        """Proprietary Reasoning Engine - Zero-Footprint Stability"""
         full_query = f"CONTEXT: {context}\n\nUSER_COMMAND: {query}" if context else query
         try:
-            # Modern 2026 API structure to prevent 'Bad Request' errors
-            response = self.client.chat.completions.create(
+            # Using the most stable 2026 method to stop the 'Bad Request' cycle
+            response = self.client.chat_completion(
                 model="meta-llama/Meta-Llama-3-70B-Instruct",
                 messages=[
                     {"role": "system", "content": self.identity},
                     {"role": "user", "content": full_query}
                 ],
-                max_tokens=2500,
-                temperature=0.4
+                max_tokens=2048,
+                stream=False
             )
             return response.choices[0].message.content
         except Exception as e:
-            # Clean error reporting for debugging
-            return f"HOVER AI Neural Link: Connection optimization required. Details: {str(e)[:100]}"
+            # Direct error reporting to identify exactly what is failing
+            return f"HOVER AI Neural Link Error: {str(e)}"
 
     def analyze_deep(self, file):
         """Processes all file types including Excel, CSV, and Text"""
@@ -39,10 +39,10 @@ class HoverAgent:
             ext = file.name.split('.')[-1].lower()
             if ext in ['csv', 'xlsx', 'xls']:
                 df = pd.read_excel(file) if 'xls' in ext else pd.read_csv(file)
-                return f"DATA ANALYSIS:\n{df.describe().to_string()}\n\nSample:\n{df.head(3).to_string()}"
+                return f"DATA ANALYSIS:\n{df.describe().to_string()}"
             return file.read().decode("utf-8", errors='ignore')[:15000]
         except Exception as e:
             return f"Analysis Failed: {str(e)}"
 
-# Global Singleton
+# Global Singleton instance
 hover_agent = HoverAgent()
