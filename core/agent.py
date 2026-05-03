@@ -19,7 +19,6 @@ class HoverAgent:
         full_query = f"CONTEXT: {context}\n\nUSER_COMMAND: {query}" if context else query
         
         try:
-            # Using Llama 3.1 70B - The most stable and powerful model available
             response = self.client.chat_completion(
                 model="meta-llama/Llama-3.1-70B-Instruct",
                 messages=[
@@ -44,5 +43,4 @@ class HoverAgent:
         except Exception as e:
             return f"Analysis Failed: {str(e)}"
 
-# Global Singleton instance
 hover_agent = HoverAgent()
