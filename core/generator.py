@@ -3,12 +3,12 @@ from huggingface_hub import InferenceClient
 import edge_tts
 import os
 from PIL import Image
-from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
+from moviepy.editor import ImageClip, AudioFileClip
 
+# Initialize Client
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
 def query_image_gen(prompt):
-    # Flux is the best free model currently available
     model_id = "black-forest-labs/FLUX.1-schnell"
     ugc_prompt = f"{prompt}, realistic UGC style, amateur smartphone photo, candid"
     image = client.text_to_image(ugc_prompt, model=model_id)
@@ -29,19 +29,17 @@ def query_im2im_gen(uploaded_file, prompt):
     image.save(path)
     return path
 
-# --- NEW: 30-Second Video Engine (The "UGC Fix") ---
 def create_ugc_video(image_path, audio_path, duration):
     try:
-        # Load the generated AI image and voiceover
-        img_clip = ImageClip(image_path).set_duration(duration)
         audio_clip = AudioFileClip(audio_path)
+        # Use the actual audio duration if it's shorter than the user's timer
+        final_duration = min(duration, audio_clip.duration)
         
-        # Ensure audio and video length match
-        final_duration = min(duration, audio_clip.duration + 1)
-        video = img_clip.set_duration(final_duration).set_audio(audio_clip)
+        img_clip = ImageClip(image_path).set_duration(final_duration)
+        video = img_clip.set_audio(audio_clip)
         
-        # Apply a 'Ken Burns' effect (Slow Zoom) to make it feel like a video
-        video = video.resize(lambda t: 1 + 0.02 * t) # Subtle 2% zoom over time
+        # Subtle Zoom Effect for a "Video" feel
+        video = video.resize(lambda t: 1 + 0.03 * t) 
         
         output_path = "output/final_reel.mp4"
         video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac")
