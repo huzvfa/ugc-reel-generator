@@ -1,68 +1,59 @@
 import streamlit as st
-import PIL.Image as Image # To handle uploaded images
-from core import image_gen # Change import style
-from core.voice_gen import generate_voiceover
+import asyncio
+from core import generator
 
-st.set_page_config(page_title="UGC AI Reel Generator", layout="wide")
+st.title("🚀 Pro UGC AI Content Suite")
 
-st.title("🎬 UGC AI Reel Generator")
-st.markdown("---")
+# --- 1. UPLOAD ---
+uploaded_file = st.file_uploader("Choose a JPG/PNG...", type=["jpg", "png"])
 
-# --- Sidebar (Configuration) ---
-st.sidebar.header("Configuration")
-hf_token_status = "✅ Configured" if "HF_TOKEN" in st.secrets else "❌ Missing!"
-st.sidebar.info(f"Hugging Face Token: {hf_token_status}")
-
-# --- NEW: Image-to-Image Section ---
-st.header("1. Upload Sample Image")
-st.write("The AI engine will use this as a reference for your new image.")
-uploaded_file = st.file_uploader("Choose a JPG/PNG...", type=["jpg", "png", "jpeg"])
-
-if uploaded_file is not None:
-    # Preview the uploaded image
-    sample_image = Image.open(uploaded_file)
-    st.image(sample_image, caption="Sample Reference", width=300)
-
-# --- Generator Section ---
+# --- 2. CONFIGURE ---
 st.header("2. Configure Generator")
 col1, col2 = st.columns(2)
 
 with col1:
-    prompt = st.text_area("Describe your AI Creator/Scenario:", "A young creator in a cafe talking to camera")
-    script = st.text_area("Script (What they say):", "Hey guys! Check out this awesome new place, link in bio!")
+    prompt = st.text_area("Describe your AI Scenario:", placeholder="A traveler sipping coffee in Northern Pakistan...")
+    script = st.text_area("Script:", "Check out this view! Use my code for 10% off.")
+    
+    # NEW: Voice Selection
+    voices = {
+        "Male (Professional)": "en-US-ChristopherNeural",
+        "Female (Energetic)": "en-US-AnaNeural",
+        "Male (Casual)": "en-GB-RyanNeural",
+        "Female (Soft)": "en-US-MichelleNeural"
+    }
+    selected_voice = st.selectbox("Select Voiceover Agent:", list(voices.keys()))
 
 with col2:
-    mode = st.radio("Generation Mode:", ("Pure Text-to-Image", "Image-to-Image Reference"))
-
-# --- Execution Section ---
-st.markdown("---")
-if st.button("Generate Reel Assets"):
+    mode = st.radio("Generation Mode:", 
+                    ["Text-to-Image", "Image-to-Image", "Text-to-Video", "Image-to-Video"])
     
-    # 1. Image Generation
-    with st.spinner("Analyzing reference & generating new UGC image..."):
-        try:
-            # We must use the updated 'image_gen.query_image_gen'
-            if mode == "Image-to-Image Reference" and uploaded_file is not None:
-                # Need specific logic in core/image_gen.py for this
-                img_path = image_gen.query_im2im_gen(uploaded_file, prompt)
-            else:
-                # Text-to-Image
-                img_path = image_gen.query_image_gen(prompt)
-            
-            st.image(img_path, caption="Generated UGC Creator (Final)", width=300)
-            st.session_state['gen_img_path'] = img_path # Save for next steps
+    # NEW: Duration Timer
+    video_duration = st.slider("Target Video Length (Seconds):", 5, 30, 15)
 
-        except Exception as e:
-            st.error(f"Image Generation Failed: {e}")
-            st.stop()
+# --- 3. GENERATE ---
+if st.button("Generate AI Content"):
+    # Path logic
+    img_path = None
+    
+    # Step A: Image Generation (Base for Video or standalone)
+    with st.spinner("Generating Visuals..."):
+        if "Image" in mode and uploaded_file:
+            img_path = generator.query_im2im_gen(uploaded_file, prompt)
+        else:
+            img_path = generator.query_image_gen(prompt)
+        st.image(img_path, width=300)
 
-    # 2. Voiceover Generation
-    with st.spinner("Generating audio script..."):
-        try:
-            audio_path = generate_voiceover(script)
-            st.audio(audio_path)
-            st.session_state['gen_audio_path'] = audio_path
-        except Exception as e:
-            st.error(f"Voiceover Failed: {e}")
+    # Step B: Voiceover
+    with st.spinner("Synthesizing Voice..."):
+        audio_path = asyncio.run(generator.generate_voice(script, voices[selected_voice]))
+        st.audio(audio_path)
 
-    st.success("Assets Generated! Ready for final assembly (Requires GPU for Animation/Editing).")
+    # Step C: Video (If selected)
+    if "Video" in mode:
+        with st.spinner(f"Rendering {video_duration}s Video..."):
+            video_path = generator.query_video_gen(img_path, video_duration)
+            if video_path:
+                st.video(video_path)
+
+    st.success("Assets ready for GitHub Repo!")
