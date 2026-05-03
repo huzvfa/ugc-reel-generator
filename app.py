@@ -2,36 +2,35 @@ import streamlit as st
 import asyncio
 import os
 import base64
+from core.brain import hover_brain
 from core import generator
 
-st.set_page_config(page_title="HOVER AI | BREAKTHROUGH", layout="wide")
+st.set_page_config(page_title="HOVER AI | THE BREAKTHROUGH", layout="wide")
 
-# --- GLOSSY DOWNLOAD OVERLAY CSS ---
-st.markdown("""
-    <style>
-    .stApp { background: #010101; color: #fff; }
-    .glass-panel { background: rgba(255,255,255,0.02); border: 1px solid #00f2fe44; border-radius: 20px; padding: 25px; }
-    .download-btn {
-        position: absolute; top: 10px; right: 10px; z-index: 100;
-        background: rgba(0, 242, 254, 0.2); backdrop-filter: blur(5px);
-        padding: 8px; border-radius: 8px; border: 1px solid #00f2fe;
-        color: white; text-decoration: none; font-size: 12px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Helper for Download Icon
-def get_download_link(file_path, label="Download"):
+# --- GLOSSY DOWNLOAD SYSTEM ---
+def download_media(file_path, type="Video"):
     with open(file_path, "rb") as f:
         data = base64.b64encode(f.read()).decode()
-    return f'<a href="data:application/octet-stream;base64,{data}" download="{os.path.basename(file_path)}" class="download-btn">📥 {label}</a>'
+    color = "#00f2fe" if type == "Video" else "#f200fe"
+    return f'''
+        <div style="position: relative;">
+            <a href="data:application/octet-stream;base64,{data}" 
+               download="{os.path.basename(file_path)}" 
+               style="position: absolute; top: 10px; right: 10px; z-index: 999; 
+                      background: {color}; color: white; padding: 5px 12px; 
+                      border-radius: 8px; text-decoration: none; font-size: 12px; 
+                      font-weight: bold; border: 1px solid white;">
+               📥 DOWNLOAD {type.upper()}
+            </a>
+        </div>
+    '''
 
-# --- HOVER CONTROL ---
+# --- UI LAYOUT ---
 with st.sidebar:
     st.title("💠 HOVER AI")
-    mode = st.selectbox("Module", ["Neural Chat", "UGC Studio"])
+    app_mode = st.radio("Interface:", ["Neural Chat", "Production Suite"])
 
-if mode == "Neural Chat":
+if app_mode == "Neural Chat":
     st.header("Proprietary Neural Link")
     if "messages" not in st.session_state: st.session_state.messages = []
     for m in st.session_state.messages:
@@ -40,50 +39,39 @@ if mode == "Neural Chat":
         st.session_state.messages.append({"role": "user", "content": q})
         with st.chat_message("user"): st.write(q)
         with st.chat_message("assistant"):
-            res = generator.hover_neural_chat(q)
+            res = hover_brain.think(q)
             st.write(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
 
-elif mode == "UGC Studio":
+elif app_mode == "Production Suite":
     st.header("Hover Production Suite")
-    st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        tool = st.selectbox("Select Tool:", ["Text-to-Image", "Image-to-Image", "Text-to-Video", "Image-to-Video"])
+        tool = st.selectbox("Tool:", ["Text-to-Video", "Image-to-Video", "Text-to-Image", "Image-to-Image"])
         prompt = st.text_area("Hover Engine Instructions:")
         
-        # --- CONDITIONAL TOOLS (Only for Video) ---
+        # CONDITIONAL VIDEO UI
         if "Video" in tool:
-            use_voice = st.toggle("Enable Neural Voice & Script", value=True)
-            if use_voice:
-                script = st.text_area("Script:")
-                timer = st.slider("Duration (s):", 5, 30, 10)
-                v_agent = st.selectbox("Agent:", ["en-US-AnaNeural", "en-GB-RyanNeural", "ur-PK-UzmaNeural"])
-        
-        u1 = st.file_uploader("Primary Image", type=['jpg','png']) if "Image-" in tool else None
-        u2 = st.file_uploader("Reference (Face/Body)", type=['jpg','png']) if tool == "Image-to-Image" else None
+            script = st.text_area("Voiceover Script (Optional):")
+            timer = st.slider("Duration (s):", 5, 30, 10)
+            v_agent = st.selectbox("Agent:", ["en-US-AnaNeural", "en-GB-RyanNeural", "ur-PK-UzmaNeural"])
+            
+        u1 = st.file_uploader("Upload Image", type=['jpg','png']) if "Image-" in tool else None
 
     with col2:
         if st.button("🚀 EXECUTE HOVER ENGINE", use_container_width=True):
-            with st.spinner("Processing Breakthrough..."):
-                # 1. Base Visual Generation
-                vis_path = generator.hover_visual_engine(prompt, tool, u1, u2)
+            with st.spinner("Processing..."):
+                # 1. Generate Base Vision
+                base_img = generator.hover_generate_visual(prompt, tool, u1)
                 
                 if "Video" in tool:
-                    # 2. REAL AI MOTION
-                    motion = generator.hover_motion_engine(prompt, vis_path)
-                    final_path = motion if motion else vis_path
-                    
-                    if use_voice and script:
-                        audio = asyncio.run(generator.hover_voice_gen(script, v_agent, "output/a.mp3"))
-                        final_path = generator.hover_sync_master(final_path, audio, timer)
-                    
-                    # 3. VIDEO OUTPUT WITH DOWNLOAD OVERLAY
-                    st.markdown(get_download_link(final_path, "Video"), unsafe_allow_html=True)
-                    st.video(final_path)
+                    # 2. GENERATE REAL VIDEO
+                    video_path = generator.hover_generate_video(prompt, base_img, timer)
+                    if video_path:
+                        st.markdown(download_media(video_path, "Video"), unsafe_allow_html=True)
+                        st.video(video_path)
                 else:
-                    # 3. IMAGE OUTPUT WITH DOWNLOAD OVERLAY
-                    st.markdown(get_download_link(vis_path, "Image"), unsafe_allow_html=True)
-                    st.image(vis_path)
-    st.markdown('</div>', unsafe_allow_html=True)
+                    # 3. GENERATE IMAGE
+                    st.markdown(download_media(base_img, "Image"), unsafe_allow_html=True)
+                    st.image(base_img)
