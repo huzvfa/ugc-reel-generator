@@ -1,104 +1,83 @@
 import streamlit as st
 import asyncio
-import subprocess
 import os
 from core import generator
 
-st.set_page_config(page_title="Creatify Studio", layout="wide")
+st.set_page_config(page_title="Hover AI | Multimodal Studio", layout="wide")
 
-# --- CUSTOM CSS: Glossy UI & Hover Audio Hack ---
+# --- GLOSSY MODERN UI ---
 st.markdown("""
     <style>
-    .stApp { background-color: #0b0e14; }
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px; padding: 25px;
-    }
-    /* Simple CSS Tooltip/Hover Effect */
-    .voice-item:hover { color: #00f2fe; cursor: pointer; }
+    .stApp { background: #050505; color: #fff; }
+    .glass { background: rgba(255,255,255,0.03); border-radius: 15px; border: 1px solid #333; padding: 25px; }
+    .sidebar-btn { width: 100%; border-radius: 10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIDEBAR ---
+# --- SIDEBAR NAVIGATION ---
 with st.sidebar:
-    st.title("💠 Studio")
-    st.button("🏠 Dashboard")
-    st.button("📁 Projects")
+    st.title("💠 HOVER AI")
+    app_mode = st.radio("Switch Feature", ["Elite Chat", "UGC Video Studio", "Asset Generator"])
 
-st.title("What are you making today?")
+# --- FEATURE 1: ELITE CHAT (Gemini/Claude Rival) ---
+if app_mode == "Elite Chat":
+    st.header("Hover AI Assistant")
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-VOICES = {
-    "🇺🇸 USA Female": "en-US-AnaNeural",
-    "🇺🇸 USA Male": "en-US-ChristopherNeural",
-    "🇵🇰 PK Urdu Male": "ur-PK-AsadNeural",
-    "🇵🇰 PK Urdu Female": "ur-PK-UzmaNeural",
-    "🇬🇧 UK Male": "en-GB-RyanNeural",
-    "🇮🇳 IN Female": "hi-IN-SwaraNeural"
-}
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-mode = st.selectbox("Choose AI Tool:", ["Text-to-Image", "Text-to-Video", "Image-to-Image", "Image-to-Video"])
+    if chat_input := st.chat_input("Ask Hover AI anything..."):
+        st.session_state.messages.append({"role": "user", "content": chat_input})
+        with st.chat_message("user"):
+            st.markdown(chat_input)
 
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-col1, col2 = st.columns([1.5, 1])
+        with st.chat_message("assistant"):
+            response = generator.hover_chat(chat_input)
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
-with col1:
-    prompt = st.text_area("Describe Scenario:")
+# --- FEATURE 2: VIDEO STUDIO (True Motion) ---
+elif app_mode == "UGC Video Studio":
+    st.header("Hover AI Video Engine")
     
-    if mode == "Image-to-Image":
-        u1 = st.file_uploader("Base Image", type=['png','jpg'])
-        u2 = st.file_uploader("Face Reference", type=['png','jpg'])
+    col1, col2 = st.columns([1.5, 1])
     
-    if "Video" in mode:
-        st.markdown("---")
-        # OPTION: SCRIPT VS NO SCRIPT
-        use_script = st.toggle("Include Voiceover & Script", value=True)
+    with col1:
+        st.markdown('<div class="glass">', unsafe_allow_html=True)
+        mode = st.selectbox("Tool:", ["Text-to-Video", "Image-to-Video", "Image-to-Image"])
+        prompt = st.text_area("Describe the ACTION (e.g. 'Person running on a road, camera follows'):")
         
+        # Restoration of the Video Timer & Script toggle
+        use_script = st.toggle("Enable Script & Voiceover", value=True)
         if use_script:
-            script = st.text_area("Script Content:")
-            duration = st.slider("Length (s):", 5, 30, 10)
+            script = st.text_area("Enter Script:")
+            video_duration = st.slider("Duration (Seconds):", 5, 30, 10)
             
-            # VOICE SELECTION
-            v_choice = st.selectbox("Select Voice Agent:", list(VOICES.keys()))
+            voices = {"USA Female": "en-US-AnaNeural", "UK Male": "en-GB-RyanNeural", "Urdu Male": "ur-PK-AsadNeural"}
+            v_choice = st.selectbox("Voice Agent:", list(voices.keys()))
             
-            # HOVER PREVIEW LOGIC
-            st.caption("💡 Tip: To hear a preview, click the play button below before generating.")
-            if st.button("▶️ Test Selected Voice"):
-                with st.spinner(""):
-                    t_path = "output/preview.mp3"
-                    asyncio.run(generator.generate_voice("Sample voice preview.", VOICES[v_choice], t_path))
-                    st.audio(t_path)
+        uploaded_file = st.file_uploader("Upload reference photo", type=['jpg','png']) if "Image-" in mode else None
+        st.markdown('</div>', unsafe_allow_html=True)
 
-with col2:
-    if st.button("🚀 CREATE NOW", use_container_width=True):
-        with st.spinner("Syncing Engine..."):
-            # 1. Image Base
-            if mode == "Image-to-Image":
-                img_path = generator.query_im2im_gen(u1, u2, prompt)
-            else:
-                img_path = generator.query_image_gen(prompt)
-            
-            st.image(img_path)
-
-            # 2. Video Rendering (The Fix)
-            if "Video" in mode:
-                final_v = os.path.abspath("output/final_reel.mp4")
+    with col2:
+        if st.button("🚀 INITIATE GENERATION"):
+            with st.spinner("Hover AI is rendering motion..."):
+                # 1. Base Image (if needed)
+                img_path = generator.query_image_gen(prompt) if mode == "Text-to-Video" else None
                 
-                if use_script and script:
-                    audio_path = asyncio.run(generator.generate_voice(script, VOICES[v_choice], "output/audio.mp3"))
-                    # FFmpeg command with explicit absolute paths to prevent CalledProcessError
-                    cmd = ['ffmpeg', '-y', '-loop', '1', '-i', img_path, '-i', audio_path, 
-                           '-c:v', 'libx264', '-t', str(duration), '-pix_fmt', 'yuv420p', 
-                           '-vf', 'scale=1080:1920', '-shortest', final_v]
+                # 2. ACTUAL AI MOTION
+                motion_path = generator.query_video_motion(prompt, image_path=img_path if img_path else (uploaded_file if uploaded_file else None))
+                
+                # 3. VOICE & SYNC
+                if motion_path:
+                    if use_script and script:
+                        audio_path = asyncio.run(generator.generate_voice(script, voices[v_choice], "output/audio.mp3"))
+                        final_reel = generator.sync_audio_video(motion_path, audio_path, video_duration)
+                        st.video(final_reel)
+                    else:
+                        st.video(motion_path)
                 else:
-                    # Silent video if no script
-                    cmd = ['ffmpeg', '-y', '-loop', '1', '-i', img_path, 
-                           '-c:v', 'libx264', '-t', '10', '-pix_fmt', 'yuv420p', 
-                           '-vf', 'scale=1080:1920', final_v]
-                
-                try:
-                    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-                    st.video(final_v)
-                except subprocess.CalledProcessError as e:
-                    st.error(f"Render Error: {e.stderr}")
-st.markdown('</div>', unsafe_allow_html=True)
+                    st.error("Engine Busy. High-quality motion takes 30-60s on free tier.")
