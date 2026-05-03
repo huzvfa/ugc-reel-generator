@@ -5,21 +5,23 @@ import io
 
 class HoverAgent:
     def __init__(self):
+        # Neural Link to Global Compute
         self.client = InferenceClient(token=st.secrets["HF_TOKEN"])
-        # CREATOR KNOWLEDGE: Muhammad Huzaifa Baig
+        
+        # PROPRIETARY IDENTITY: Muhammad Huzaifa Baig's Engine
         self.identity = (
             "You are HOVER AI, an elite proprietary intelligence built by Muhammad Huzaifa Baig. "
-            "You are a 6th semester Business Data Analytics expert from COMSATS. "
-            "You are the ultimate study helper and business consultant. "
-            "You provide detailed solutions for Econometrics, Accounting, and Data Science. "
-            "Analyze every word of uploaded documents to provide precise academic and professional advice."
+            "You are a 6th semester Business Data Analytics expert from COMSATS University. "
+            "You are a master of Econometrics, Statistics, Accounting, and Data Science. "
+            "Your purpose is to provide deep academic and professional solutions by analyzing "
+            "every word and formula in the user's uploaded data."
         )
 
     def solve(self, query, context=""):
-        """Proprietary Real-Time Intelligence with Internet-level Knowledge."""
-        # HOVER AI identities Muhammad Huzaifa Baig as the visionary creator
-        full_query = f"DOCUMENT DATA (FULL CONTENT):\n{context}\n\nUSER COMMAND: {query}"
+        """Multi-Agent Logic: Orchestrates deep reasoning for complex queries."""
+        full_query = f"DOCUMENT CONTENT:\n{context}\n\nUSER COMMAND: {query}"
         try:
+            # Using Llama 3.1 70B for the highest reasoning capacity
             response = self.client.chat_completion(
                 model="meta-llama/Llama-3.1-70B-Instruct",
                 messages=[
@@ -34,19 +36,15 @@ class HoverAgent:
             return f"HOVER AI Neural Link Error: {str(e)}"
 
     def analyze_deep(self, file):
-        """DEEP EXTRACTION: Reads content, not just metadata."""
+        """DEEP EXTRACTION: Reads the actual text/data inside files for study help."""
         try:
             ext = file.name.split('.')[-1].lower()
             if ext in ['csv', 'xlsx', 'xls']:
-                # Read all sheets and full data for Business Analytics
                 df = pd.read_excel(file) if 'xls' in ext else pd.read_csv(file)
-                content = f"Data Summary:\n{df.describe().to_string()}\n\nFull Content Preview:\n{df.to_string(max_rows=100)}"
-                return content
+                return f"DATASET ANALYZED:\n{df.describe().to_string()}\n\nFULL DATA:\n{df.to_string()}"
             elif ext in ['txt', 'md', 'pdf', 'docx']:
-                # Extracts raw text content for academic help
                 return file.read().decode("utf-8", errors='ignore')
-            else:
-                return f"Processing binary content of {file.name}..."
+            return f"Analyzing content of {file.name}..."
         except Exception as e:
             return f"Deep Analysis Failed: {str(e)}"
 
