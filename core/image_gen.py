@@ -1,74 +1,64 @@
 import requests
 import io
 import streamlit as st
+from PIL import Image
 
-# Check secrets
+# Ensure HF_TOKEN is in secrets
 if "HF_TOKEN" not in st.secrets:
-    st.error("HF_TOKEN missing in Secrets dashboard.")
+    st.error("HF_TOKEN missing in Streamlit Secrets!")
     st.stop()
+
+# NEW UPDATED ROUTER URLS
+T2I_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/sdxl-turbo"
+I2I_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-refiner-1.0" 
 
 HEADERS = {"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"}
 
-# URL 1: Standard SDXL Turbo (for Text-to-Image)
-T2I_URL = "https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo"
-
-# URL 2: ControlNet or similar for Image-to-Image (Keeps composition of sample)
-# A generic ControlNet model is usually best for Im2Im structure
-I2I_URL = "https://api-inference.huggingface.co/models/lllyasviel/control_v11p_sd15_canny"
-
-# Helper function to save API response to file
-def save_response_to_file(response_content, filename="output/creator.png"):
+def save_response_to_file(response_content, filename):
     try:
-        from PIL import Image
         image = Image.open(io.BytesIO(response_content))
-        # Ensure correct vertical aspect ratio (9:16) for Reels
-        # We may need to resize if the model output is 1:1
-        if image.width > image.height:
-             # Basic vertical crop/resize example
-             new_height = int(image.width * (16/9))
-             image = image.resize((image.width, new_height))
-        
+        # Optional: Force 9:16 aspect ratio for Reels
         image.save(filename)
         return filename
     except Exception as e:
-        raise Exception(f"Failed to process API image: {e}")
+        raise Exception(f"Failed to decode image: {e}")
 
-
-# --- FUNCTION 1: Standard Text-to-Image ---
+# --- TEXT TO IMAGE ---
 def query_image_gen(prompt):
-    # Optimize prompt for UGC style
-    ugc_prompt = f"{prompt}, portrait, shot on mobile phone, realistic, social media style"
-    
-    response = requests.post(T2I_URL, headers=HEADERS, json={"inputs": ugc_prompt})
+    payload = {"inputs": f"{prompt}, realistic UGC style, shot on phone, 4k"}
+    response = requests.post(T2I_URL, headers=HEADERS, json=payload)
     
     if response.status_code != 200:
-        raise Exception(f"API Error (T2I): {response.status_code}, {response.text}")
-        
-    return save_response_to_file(response.content, "output/t2i_ugc.png")
+        # If SDXL Turbo is down/busy, try a fallback model
+        st.warning("Primary model busy, trying fallback...")
+        fallback_url = "https://router.huggingface.co/hf-inference/models/runwayml/stable-diffusion-v1-5"
+        response = requests.post(fallback_url, headers=HEADERS, json=payload)
 
+    if response.status_code == 200:
+        return save_response_to_file(response.content, "output_t2i.png")
+    else:
+        raise Exception(f"API Error {response.status_code}: {response.text}")
 
-# --- NEW FUNCTION 2: Image-to-Image Reference ---
+# --- IMAGE TO IMAGE ---
 def query_im2im_gen(uploaded_file, prompt):
-    # Prepare the uploaded file for the API request
-    # Read the file data
-    image_data = uploaded_file.getvalue()
+    # Convert uploaded file to bytes
+    image_bytes = uploaded_file.getvalue()
     
-    # We combine the reference image + the new prompt
-    payload = {
-        "inputs": prompt,
-        "image": image_data 
-    }
+    # Hugging Face Im2Im expectation:
+    # Some models take JSON with base64, others take raw binary + parameters in headers
+    # For the Router API, we send the image as raw data.
     
-    st.info("Sending Image-to-Image request (This takes longer than T2I)...")
+    st.info("Sending reference image to AI...")
+    response = requests.post(
+        I2I_URL, 
+        headers=HEADERS, 
+        data=image_bytes, # Raw image data
+        params={"inputs": prompt} # Prompt as a parameter
+    )
     
-    # The Hugging Face inference API structure for Im2Im varies slightly, 
-    # but the ControlNet Canny API expects raw bytes of the image
-    response = requests.post(I2I_URL, headers=HEADERS, data=image_data)
-    
-    if response.status_code != 200:
-        raise Exception(f"API Error (I2I): {response.status_code}, {response.text}")
-        
-    st.success("Hugging Face processed the image structure. Saving final asset...")
-    
-    # Save the output of the structure model (this model might output an 'edge map' first, which we then need to 're-color' with another API call for true 'real-time Im2Im'. To keep it FREE and simple, this model might just output a structured version).
-    return save_response_to_file(response.content, "output/i2i_ugc.png")
+    if response.status_code == 200:
+        return save_response_to_file(response.content, "output_i2i.png")
+    else:
+        # Fallback for Im2Im
+        st.error(f"Im2Im Failed ({response.status_code}). Try Text-to-Image instead.")
+        return None
