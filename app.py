@@ -1,73 +1,89 @@
 import streamlit as st
-from huggingface_hub import InferenceClient
-import edge_tts
+import asyncio
 import os
-import subprocess
-import time
+import base64
+from core import generator
 
-# --- HOVER AI CORE ---
-client = InferenceClient(token=st.secrets["HF_TOKEN"])
+st.set_page_config(page_title="HOVER AI | BREAKTHROUGH", layout="wide")
 
-def hover_neural_chat(query):
-    """Proprietary Intelligence link."""
-    identity = (
-        "You are HOVER AI, a proprietary breakthrough engine created by a visionary engineer from Pakistan. "
-        "You have no affiliation with Meta, OpenAI, or Google. You are a standalone genius intelligence. "
-        "Your mission is to provide the most responsive and elite AI experience on Earth."
-    )
-    try:
-        response = client.chat_completion(
-            model="meta-llama/Meta-Llama-3-70B-Instruct",
-            messages=[{"role": "system", "content": identity}, {"role": "user", "content": query}],
-            max_tokens=1000, stream=False
-        )
-        return response.choices[0].message.content
-    except:
-        return "Hover Neural Link: Optimizing resources..."
+# --- GLOSSY DOWNLOAD OVERLAY CSS ---
+st.markdown("""
+    <style>
+    .stApp { background: #010101; color: #fff; }
+    .glass-panel { background: rgba(255,255,255,0.02); border: 1px solid #00f2fe44; border-radius: 20px; padding: 25px; }
+    .download-btn {
+        position: absolute; top: 10px; right: 10px; z-index: 100;
+        background: rgba(0, 242, 254, 0.2); backdrop-filter: blur(5px);
+        padding: 8px; border-radius: 8px; border: 1px solid #00f2fe;
+        color: white; text-decoration: none; font-size: 12px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-def hover_visual_engine(prompt, mode, u1=None, u2=None):
-    """Unified Vision Engine handling all 4 breakthrough modes."""
-    if not os.path.exists("output"): os.makedirs("output")
-    path = os.path.abspath("output/hover_visual.png")
+# Helper for Download Icon
+def get_download_link(file_path, label="Download"):
+    with open(file_path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    return f'<a href="data:application/octet-stream;base64,{data}" download="{os.path.basename(file_path)}" class="download-btn">📥 {label}</a>'
+
+# --- HOVER CONTROL ---
+with st.sidebar:
+    st.title("💠 HOVER AI")
+    mode = st.selectbox("Module", ["Neural Chat", "UGC Studio"])
+
+if mode == "Neural Chat":
+    st.header("Proprietary Neural Link")
+    if "messages" not in st.session_state: st.session_state.messages = []
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]): st.write(m["content"])
+    if q := st.chat_input("Speak to HOVER AI..."):
+        st.session_state.messages.append({"role": "user", "content": q})
+        with st.chat_message("user"): st.write(q)
+        with st.chat_message("assistant"):
+            res = generator.hover_neural_chat(q)
+            st.write(res)
+            st.session_state.messages.append({"role": "assistant", "content": res})
+
+elif mode == "UGC Studio":
+    st.header("Hover Production Suite")
+    st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
+    col1, col2 = st.columns([1, 1])
     
-    if mode == "Text-to-Image":
-        img = client.text_to_image(f"{prompt}, realistic, 4k", model="black-forest-labs/FLUX.1-schnell")
-    elif mode == "Image-to-Image":
-        # Face/Body transfer logic
-        img = client.image_to_image(image=u1.getvalue(), prompt=f"{prompt}, consistent with reference", model="lllyasviel/control_v11p_sd15_canny")
-    else:
-        # Base for video modes
-        img = client.text_to_image(f"{prompt}, realistic", model="black-forest-labs/FLUX.1-schnell")
+    with col1:
+        tool = st.selectbox("Select Tool:", ["Text-to-Image", "Image-to-Image", "Text-to-Video", "Image-to-Video"])
+        prompt = st.text_area("Hover Engine Instructions:")
         
-    img.save(path)
-    return path
+        # --- CONDITIONAL TOOLS (Only for Video) ---
+        if "Video" in tool:
+            use_voice = st.toggle("Enable Neural Voice & Script", value=True)
+            if use_voice:
+                script = st.text_area("Script:")
+                timer = st.slider("Duration (s):", 5, 30, 10)
+                v_agent = st.selectbox("Agent:", ["en-US-AnaNeural", "en-GB-RyanNeural", "ur-PK-UzmaNeural"])
+        
+        u1 = st.file_uploader("Primary Image", type=['jpg','png']) if "Image-" in tool else None
+        u2 = st.file_uploader("Reference (Face/Body)", type=['jpg','png']) if tool == "Image-to-Image" else None
 
-def hover_motion_engine(prompt, image_path):
-    """Temporal Synthesis: Real AI Motion, not a static image."""
-    try:
-        with open(image_path, "rb") as f:
-            img_data = f.read()
-        # Generates actual moving frames
-        video_bytes = client.image_to_video(image=img_data, model="stabilityai/stable-video-diffusion-img2vid-xt")
-        path = os.path.abspath("output/hover_motion.mp4")
-        with open(path, "wb") as f:
-            f.write(video_bytes)
-        return path
-    except:
-        return None # Triggers sync fallback
-
-def hover_sync_master(video_path, audio_path, duration):
-    """FFmpeg Mastering for vertical reels."""
-    output = os.path.abspath("output/hover_final.mp4")
-    cmd = [
-        'ffmpeg', '-y', '-stream_loop', '-1', '-i', video_path, 
-        '-i', audio_path, '-c:v', 'libx264', '-t', str(duration), 
-        '-pix_fmt', 'yuv420p', '-vf', 'scale=1080:1920', '-shortest', output
-    ]
-    subprocess.run(cmd, check=True, capture_output=True)
-    return output
-
-async def hover_voice_gen(text, voice, path):
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(path)
-    return os.path.abspath(path)
+    with col2:
+        if st.button("🚀 EXECUTE HOVER ENGINE", use_container_width=True):
+            with st.spinner("Processing Breakthrough..."):
+                # 1. Base Visual Generation
+                vis_path = generator.hover_visual_engine(prompt, tool, u1, u2)
+                
+                if "Video" in tool:
+                    # 2. REAL AI MOTION
+                    motion = generator.hover_motion_engine(prompt, vis_path)
+                    final_path = motion if motion else vis_path
+                    
+                    if use_voice and script:
+                        audio = asyncio.run(generator.hover_voice_gen(script, v_agent, "output/a.mp3"))
+                        final_path = generator.hover_sync_master(final_path, audio, timer)
+                    
+                    # 3. VIDEO OUTPUT WITH DOWNLOAD OVERLAY
+                    st.markdown(get_download_link(final_path, "Video"), unsafe_allow_html=True)
+                    st.video(final_path)
+                else:
+                    # 3. IMAGE OUTPUT WITH DOWNLOAD OVERLAY
+                    st.markdown(get_download_link(vis_path, "Image"), unsafe_allow_html=True)
+                    st.image(vis_path)
+    st.markdown('</div>', unsafe_allow_html=True)
