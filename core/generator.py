@@ -3,9 +3,9 @@ from huggingface_hub import InferenceClient
 import edge_tts
 import os
 import subprocess
+import time
 from PIL import Image
 
-# Initialize Client
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
 def query_image_gen(prompt):
@@ -29,24 +29,33 @@ def query_im2im_gen(uploaded_file, prompt):
     image.save(path)
     return path
 
-# --- THE STABLE VIDEO ENGINE (Direct FFmpeg) ---
+# --- 🚀 THE STABLE VIDEO ENGINE (FFmpeg Direct) ---
 def create_ugc_video(image_path, audio_path, duration):
     if not os.path.exists("output"): os.makedirs("output")
     output_path = "output/final_reel.mp4"
     
-    # FFmpeg Command: Loops the image, attaches audio, adds a subtle zoom
-    # This is 100% stable and bypasses all MoviePy errors
+    # Wait for file to exist and have size > 0
+    timeout = 10
+    start_time = time.time()
+    while not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+        time.sleep(0.5)
+        if time.time() - start_time > timeout:
+            st.error("Audio generation timed out.")
+            return None
+
+    # FFmpeg Command: Direct processing
     cmd = [
         'ffmpeg', '-y', 
         '-loop', '1', '-i', image_path, 
         '-i', audio_path, 
         '-c:v', 'libx264', '-t', str(duration), 
         '-pix_fmt', 'yuv420p', 
-        '-vf', "scale=1080:1920,zoompan=z='min(zoom+0.0005,1.5)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920",
+        '-vf', "scale=1080:1920",
         '-shortest', output_path
     ]
     
     try:
+        # We use a simple shell-friendly execution
         subprocess.run(cmd, check=True, capture_output=True)
         return output_path
     except subprocess.CalledProcessError as e:
@@ -55,6 +64,10 @@ def create_ugc_video(image_path, audio_path, duration):
 
 async def generate_voice(text, voice, output_path="output/voice.mp3"):
     if not os.path.exists("output"): os.makedirs("output")
+    # Force overwrite
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_path)
     return output_path
