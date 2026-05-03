@@ -4,13 +4,12 @@ import edge_tts
 import os
 import subprocess
 import time
-from PIL import Image
 
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
 def query_image_gen(prompt):
     model_id = "black-forest-labs/FLUX.1-schnell"
-    ugc_prompt = f"{prompt}, realistic UGC style, amateur smartphone photo, candid"
+    ugc_prompt = f"{prompt}, realistic UGC style, amateur smartphone photo, candid, high resolution"
     image = client.text_to_image(ugc_prompt, model=model_id)
     if not os.path.exists("output"): os.makedirs("output")
     path = "output/base_image.png"
@@ -29,33 +28,19 @@ def query_im2im_gen(uploaded_file, prompt):
     image.save(path)
     return path
 
-# --- 🚀 THE STABLE VIDEO ENGINE (FFmpeg Direct) ---
 def create_ugc_video(image_path, audio_path, duration):
-    if not os.path.exists("output"): os.makedirs("output")
     output_path = "output/final_reel.mp4"
     
-    # Wait for file to exist and have size > 0
-    timeout = 10
-    start_time = time.time()
-    while not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
-        time.sleep(0.5)
-        if time.time() - start_time > timeout:
-            st.error("Audio generation timed out.")
-            return None
-
-    # FFmpeg Command: Direct processing
-    cmd = [
-        'ffmpeg', '-y', 
-        '-loop', '1', '-i', image_path, 
-        '-i', audio_path, 
-        '-c:v', 'libx264', '-t', str(duration), 
-        '-pix_fmt', 'yuv420p', 
-        '-vf', "scale=1080:1920",
-        '-shortest', output_path
-    ]
+    # FFmpeg command: handles image with optional audio
+    cmd = ['ffmpeg', '-y', '-loop', '1', '-i', image_path]
+    
+    if audio_path and os.path.exists(audio_path):
+        cmd.extend(['-i', audio_path])
+        cmd.extend(['-c:v', 'libx264', '-t', str(duration), '-pix_fmt', 'yuv420p', '-vf', 'scale=1080:1920', '-shortest', output_path])
+    else:
+        cmd.extend(['-c:v', 'libx264', '-t', str(duration), '-pix_fmt', 'yuv420p', '-vf', 'scale=1080:1920', output_path])
     
     try:
-        # We use a simple shell-friendly execution
         subprocess.run(cmd, check=True, capture_output=True)
         return output_path
     except subprocess.CalledProcessError as e:
@@ -64,10 +49,7 @@ def create_ugc_video(image_path, audio_path, duration):
 
 async def generate_voice(text, voice, output_path="output/voice.mp3"):
     if not os.path.exists("output"): os.makedirs("output")
-    # Force overwrite
-    if os.path.exists(output_path):
-        os.remove(output_path)
-    
+    if os.path.exists(output_path): os.remove(output_path)
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_path)
     return output_path
