@@ -2,15 +2,8 @@ import streamlit as st
 from huggingface_hub import InferenceClient
 import edge_tts
 import os
+import subprocess
 from PIL import Image
-
-# Robust MoviePy Import
-try:
-    from moviepy.editor import ImageClip, AudioFileClip
-except ImportError:
-    # Fallback for different moviepy versions
-    from moviepy.video.VideoClip import ImageClip
-    from moviepy.audio.io.AudioFileClip import AudioFileClip
 
 # Initialize Client
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
@@ -36,23 +29,28 @@ def query_im2im_gen(uploaded_file, prompt):
     image.save(path)
     return path
 
+# --- THE STABLE VIDEO ENGINE (Direct FFmpeg) ---
 def create_ugc_video(image_path, audio_path, duration):
+    if not os.path.exists("output"): os.makedirs("output")
+    output_path = "output/final_reel.mp4"
+    
+    # FFmpeg Command: Loops the image, attaches audio, adds a subtle zoom
+    # This is 100% stable and bypasses all MoviePy errors
+    cmd = [
+        'ffmpeg', '-y', 
+        '-loop', '1', '-i', image_path, 
+        '-i', audio_path, 
+        '-c:v', 'libx264', '-t', str(duration), 
+        '-pix_fmt', 'yuv420p', 
+        '-vf', "scale=1080:1920,zoompan=z='min(zoom+0.0005,1.5)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920",
+        '-shortest', output_path
+    ]
+    
     try:
-        audio_clip = AudioFileClip(audio_path)
-        # Use the actual audio duration if it's shorter than the user's timer
-        final_duration = min(duration, audio_clip.duration)
-        
-        img_clip = ImageClip(image_path).set_duration(final_duration)
-        video = img_clip.set_audio(audio_clip)
-        
-        # Subtle Zoom Effect for a "Video" feel
-        video = video.resize(lambda t: 1 + 0.03 * t) 
-        
-        output_path = "output/final_reel.mp4"
-        video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac")
+        subprocess.run(cmd, check=True, capture_output=True)
         return output_path
-    except Exception as e:
-        st.error(f"Video Rendering Error: {e}")
+    except subprocess.CalledProcessError as e:
+        st.error(f"FFmpeg Error: {e.stderr.decode()}")
         return None
 
 async def generate_voice(text, voice, output_path="output/voice.mp3"):
