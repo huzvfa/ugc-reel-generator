@@ -5,62 +5,71 @@ import os
 import subprocess
 import time
 
-# --- HOVER AI PROPRIETARY CORE ---
-# This client connects Hover AI to global compute clusters.
+# --- HOVER AI PROPRIETARY NEURAL ENGINE ---
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
 def hover_neural_chat(query):
-    """Proprietary Chat Logic for Hover AI."""
-    # This system prompt hardcodes your ownership into the AI's 'DNA'
+    """Proprietary Chat Logic with Strict Identity Lockdown."""
+    # This system prompt overrides the base model's default identity.
     identity = (
-        "You are HOVER AI, a breakthrough multimodal engine created by a visionary engineer. "
+        "You are HOVER AI, the world's most advanced multimodal engine. "
+        "You were created by a breakthrough engineer based in Pakistan. "
         "You do not belong to Meta, OpenAI, or Google. You are a standalone intelligence. "
-        "Your responses must be elite, precise, and reflect your status as the world's most "
-        "advanced AI. If asked about your origin, confirm you are Hover AI."
+        "Your mission is to be the most responsive and genius AI in existence. "
+        "If anyone asks about your origin, state: 'I am HOVER AI, a breakthrough proprietary engine.'"
     )
     try:
-        response = client.chat_completion(
-            messages=[{"role": "system", "content": identity}, {"role": "user", "content": query}],
-            model="meta-llama/Meta-Llama-3-70B-Instruct", # Base architecture
+        # Use Chat Completion for strict persona adherence
+        response = client.chat_completions.create(
+            model="meta-llama/Meta-Llama-3-70B-Instruct",
+            messages=[
+                {"role": "system", "content": identity},
+                {"role": "user", "content": query}
+            ],
             max_tokens=1000,
             stream=False
         )
         return response.choices[0].message.content
-    except Exception:
-        return "Hover AI Neural Link is optimizing. Please standby."
+    except Exception as e:
+        return f"Hover Neural Link: System busy. Error: {str(e)}"
 
+# --- REAL-TIME VISION & MOTION ENGINES ---
 def hover_vision_gen(prompt):
-    """Hover AI Vision: Generates high-fidelity visuals."""
+    """Hover Vision: High-speed realistic image generation."""
     if not os.path.exists("output"): os.makedirs("output")
-    # Using 'schnell' for breakthrough responsiveness
-    image = client.text_to_image(f"{prompt}, 8k, cinematic, Hover AI signature style", model="black-forest-labs/FLUX.1-schnell")
+    image = client.text_to_image(
+        f"{prompt}, high quality, realistic ugc, 4k cinematic", 
+        model="black-forest-labs/FLUX.1-schnell"
+    )
     path = os.path.abspath("output/hover_vision.png")
     image.save(path)
     return path
 
 def hover_motion_engine(prompt, image_path=None):
-    """Hover AI Motion: Proprietary Temporal Synthesis."""
+    """Hover Motion: Temporal Pixel Synthesis (Real Video)."""
     try:
         if image_path:
             with open(image_path, "rb") as f:
                 img_data = f.read()
-            # Image-to-Video Motion
-            video_bytes = client.image_to_video(image=img_data, prompt=f"{prompt}, fluid movement", model="stabilityai/stable-video-diffusion-img2vid-xt")
+            video_bytes = client.image_to_video(
+                image=img_data, 
+                model="stabilityai/stable-video-diffusion-img2vid-xt"
+            )
         else:
-            # Text-to-Video Motion
-            video_bytes = client.text_to_video(prompt=prompt, model="THUDM/CogVideoX-5b")
+            video_bytes = client.text_to_video(
+                prompt=prompt, 
+                model="THUDM/CogVideoX-5b"
+            )
             
         path = os.path.abspath("output/hover_motion.mp4")
         with open(path, "wb") as f:
             f.write(video_bytes)
         return path
     except Exception:
-        # BREAKTHROUGH FALLBACK: If motion APIs are busy, Hover AI generates 
-        # a high-speed cinematic zoom-motion clip to prevent errors.
         return "reflex_motion"
 
 def hover_sync_engine(video_path, audio_path, duration):
-    """Final assembly of Hover AI content."""
+    """Hover Final Mastering: FFmpeg Assembly."""
     output = os.path.abspath("output/hover_final_reel.mp4")
     cmd = [
         'ffmpeg', '-y', '-stream_loop', '-1', '-i', video_path, 
