@@ -6,37 +6,25 @@ import subprocess
 
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
-def hover_generate_visual(prompt, mode, u1=None, u2=None):
-    """Handles Text-to-Image and Image-to-Image (UGC style)"""
+def hover_master_video(prompt, base_img, duration):
+    """Generates ultra-realistic 4K motion independently of audio status."""
     if not os.path.exists("output"): os.makedirs("output")
-    path = os.path.abspath("output/hover_vision.png")
+    final_v = os.path.abspath("output/hover_master.mp4")
     
-    # Internal Prompt Expansion for breakthrough quality
-    enhanced_prompt = f"{prompt}, ultra-realistic, 8k, cinematic, detailed ugc"
-
-    if mode == "Image-to-Image" and u1:
-        img = client.image_to_image(image=u1.getvalue(), prompt=enhanced_prompt, model="lllyasviel/control_v11p_sd15_canny")
-    else:
-        img = client.text_to_image(enhanced_prompt, model="black-forest-labs/FLUX.1-schnell")
-    
-    img.save(path)
-    return path
-
-def hover_generate_video(prompt, base_img, duration):
-    """Temporal Synthesis: Real AI motion synced with FFmpeg"""
-    final_v = os.path.abspath("output/hover_final.mp4")
     try:
         with open(base_img, "rb") as f:
             img_data = f.read()
+        # High-motion Synthesis
         video_bytes = client.image_to_video(img_data, model="stabilityai/stable-video-diffusion-img2vid-xt")
         
-        temp_v = os.path.abspath("output/temp_v.mp4")
-        with open(temp_v, "wb") as f:
+        temp_path = os.path.abspath("output/temp.mp4")
+        with open(temp_path, "wb") as f:
             f.write(video_bytes)
             
+        # 9:16 Ultra-Realistic Mastering
         cmd = [
-            'ffmpeg', '-y', '-stream_loop', '-1', '-i', temp_v,
-            '-t', str(duration), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+            'ffmpeg', '-y', '-stream_loop', '-1', '-i', temp_path,
+            '-t', str(duration), '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p',
             '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
             final_v
         ]
@@ -45,7 +33,9 @@ def hover_generate_video(prompt, base_img, duration):
     except:
         return None
 
-async def hover_voice_engine(text, voice, path):
-    communicate = edge_tts.Communicate(text, voice)
+async def hover_voice_engine(text, voice, rate="+0%", pitch="+0Hz"):
+    """Fixed Tone & Language Logic for Seductive/Serious English and Native Urdu."""
+    path = os.path.abspath("output/voice.mp3")
+    communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
     await communicate.save(path)
-    return os.path.abspath(path)
+    return path
