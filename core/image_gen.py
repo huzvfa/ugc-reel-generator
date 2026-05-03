@@ -9,7 +9,7 @@ if "HF_TOKEN" not in st.secrets:
     st.stop()
 
 # NEW UPDATED ROUTER URLS
-T2I_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/sdxl-turbo"
+T2I_URL = T2I_URL = "https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo"
 I2I_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-refiner-1.0" 
 
 HEADERS = {"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"}
