@@ -3,7 +3,14 @@ from huggingface_hub import InferenceClient
 import edge_tts
 import os
 from PIL import Image
-from moviepy.editor import ImageClip, AudioFileClip
+
+# Robust MoviePy Import
+try:
+    from moviepy.editor import ImageClip, AudioFileClip
+except ImportError:
+    # Fallback for different moviepy versions
+    from moviepy.video.VideoClip import ImageClip
+    from moviepy.audio.io.AudioFileClip import AudioFileClip
 
 # Initialize Client
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
