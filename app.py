@@ -17,18 +17,16 @@ st.markdown("""
 
 with st.sidebar:
     st.markdown("<h1 style='color:#00f2fe;'>💠 HOVER AI</h1>", unsafe_allow_html=True)
-    mode = st.radio("Switch Module", ["Neural Chat", "UGC Studio"])
+    mode = st.radio("Neural Interface", ["Neural Chat", "UGC Studio"])
 
 if mode == "Neural Chat":
     st.header("Proprietary Neural Link")
     
-    # Message Display
     if "messages" not in st.session_state: 
         st.session_state.messages = []
     
     for m in st.session_state.messages:
-        with st.chat_message(m["role"]): 
-            st.write(m["content"])
+        with st.chat_message(m["role"]): st.write(m["content"])
 
     # --- UNIFIED COMMAND BAR ---
     st.divider()
@@ -38,28 +36,19 @@ if mode == "Neural Chat":
         doc = st.file_uploader("📎", type=None, label_visibility="collapsed")
     
     with input_col:
-        # Standardize query capture
         query = st.chat_input("Command HOVER AI...")
 
     if query:
-        # 1. Capture user message
         st.session_state.messages.append({"role": "user", "content": query})
-        with st.chat_message("user"): 
-            st.write(query)
+        with st.chat_message("user"): st.write(query)
         
-        # 2. Process Assistant Response
         with st.chat_message("assistant"):
             st.markdown('<div class="thinking-line"></div>', unsafe_allow_html=True)
-            
-            # Analyze context if file exists
             context = hover_agent.analyze_deep(doc) if doc else ""
-            
-            # Call the stabilized 'solve' method
             res = hover_agent.solve(query, context=context)
-            
             st.write(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
 
 elif mode == "UGC Studio":
     st.header("Hover Production Suite")
-    # (Existing generation logic remains)
+    # (Rest of UGC Studio remains same)
