@@ -1,18 +1,10 @@
-import torch
-from diffusers import AutoPipelineForText2Image
-from PIL import Image
+import requests
+import streamlit as st
 
-class UGCImageGen:
-    def __init__(self):
-        self.pipe = AutoPipelineForText2Image.from_pretrained(
-            "stabilityai/sdxl-turbo", 
-            torch_dtype=torch.float16, 
-            variant="fp16"
-        ).to("cuda")
+# Using Hugging Face's Free Inference API
+API_URL = "https://api-inference.huggingface.co/models/stabilityai/sdxl-turbo"
+headers = {"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"} 
 
-    def generate(self, prompt, path="input/creator_face.png"):
-        # Specialized UGC prompt engineering
-        ugc_prompt = f"{prompt}, centered portrait, shot on mobile phone, realistic, social media style"
-        image = self.pipe(prompt=ugc_prompt, num_inference_steps=2, guidance_scale=0.0, height=1024, width=576).images[0]
-        image.save(path)
-        return path
+def query_image_gen(prompt):
+    response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
+    return response.content # This returns the raw image data
