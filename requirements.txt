@@ -1,4 +1,5 @@
 streamlit
-requests
+huggingface_hub
+pillow
 gtts
 moviepy
