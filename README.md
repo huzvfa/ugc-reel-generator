@@ -1,4 +1,3 @@
-# ugc-reel-generator
 # 🎬 AI-UGC Reel Generator
 
 An automated pipeline to generate high-converting **User-Generated Content (UGC)** reels using open-source AI models.
