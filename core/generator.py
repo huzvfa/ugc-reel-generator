@@ -19,6 +19,7 @@ def query_image_gen(prompt):
 
 def query_im2im_gen(uploaded_file, prompt):
     image_bytes = uploaded_file.getvalue()
+    # Task-specific call for Image-to-Image
     image = client.image_to_image(
         image=image_bytes,
         prompt=f"{prompt}, high quality, realistic",
@@ -31,24 +32,23 @@ def query_im2im_gen(uploaded_file, prompt):
 
 def query_video_gen(image_path):
     try:
-        # Use the specialized video generation model
-        # Stable Video Diffusion expects the image as the input
         with open(image_path, "rb") as f:
             image_data = f.read()
             
-        # The correct method for 2026 Hugging Face Client
-        video_bytes = client.request_papi(
+        # 🚀 FIX: Using the low-level request method for Video Tasks
+        # This replaces .post() and .request_papi()
+        response = client.request(
+            method="POST",
             path="stabilityai/stable-video-diffusion-img2vid-xt",
-            data=image_data,
-            method="POST"
+            data=image_data
         )
         
+        if not os.path.exists("output"): os.makedirs("output")
         video_path = "output/clip.mp4"
         with open(video_path, "wb") as f:
-            f.write(video_bytes)
+            f.write(response) # 'response' contains the binary video data
         return video_path
     except Exception as e:
-        # Fallback for free tier if SVD is busy
         st.error(f"Video Gen Error: {e}")
         return None
 
