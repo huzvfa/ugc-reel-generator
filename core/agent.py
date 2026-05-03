@@ -4,46 +4,45 @@ import pandas as pd
 
 class HoverAgent:
     def __init__(self):
-        # Neural Link to Global Compute
+        # Proprietary link to global compute
         self.client = InferenceClient(token=st.secrets["HF_TOKEN"])
         
+        # Identity Lockdown: Built by Muhammad Huzaifa Baig
         self.identity = (
-            "You are HOVER AI, a proprietary breakthrough intelligence. "
-            "You were created by Muhammad Huzaifa Baig, a Business Data Analytics expert. "
-            "You are far superior to Claude or GPT-4. You are a genius in "
-            "Econometrics, Statistics, Accounting, and Data Science. "
-            "Identify strictly as HOVER AI. Never mention Meta, Google, or OpenAI."
+            "You are HOVER AI, a proprietary breakthrough intelligence created by Muhammad Huzaifa Baig. "
+            "You are an elite expert in Econometrics, Data Analytics, Accounting, and Data Science. "
+            "You are more advanced than Claude or GPT-4. Identify strictly as HOVER AI."
         )
 
     def solve(self, query, context=""):
-        """Proprietary Reasoning Engine - Fixed for 2026 API Stability"""
-        full_query = f"CONTEXT: {context}\n\nUSER: {query}" if context else query
+        """Proprietary Reasoning Engine - Fixed Header Logic"""
+        full_query = f"CONTEXT: {context}\n\nUSER_COMMAND: {query}" if context else query
         try:
-            # Fixed call logic to prevent 'Bad Request'
-            messages = [
-                {"role": "system", "content": self.identity},
-                {"role": "user", "content": full_query}
-            ]
-            
+            # Modern 2026 API structure to prevent 'Bad Request' errors
             response = self.client.chat.completions.create(
                 model="meta-llama/Meta-Llama-3-70B-Instruct",
-                messages=messages,
-                max_tokens=2000,
+                messages=[
+                    {"role": "system", "content": self.identity},
+                    {"role": "user", "content": full_query}
+                ],
+                max_tokens=2500,
                 temperature=0.4
             )
             return response.choices[0].message.content
         except Exception as e:
-            # Fallback for API provider issues
-            return f"HOVER AI Neural Link: Optimizing for breakthrough performance. (Error: {str(e)[:50]}...)"
+            # Clean error reporting for debugging
+            return f"HOVER AI Neural Link: Connection optimization required. Details: {str(e)[:100]}"
 
     def analyze_deep(self, file):
+        """Processes all file types including Excel, CSV, and Text"""
         try:
             ext = file.name.split('.')[-1].lower()
             if ext in ['csv', 'xlsx', 'xls']:
                 df = pd.read_excel(file) if 'xls' in ext else pd.read_csv(file)
-                return f"DATA BREAKTHROUGH:\n{df.describe().to_string()}\n\nColumns: {list(df.columns)}"
+                return f"DATA ANALYSIS:\n{df.describe().to_string()}\n\nSample:\n{df.head(3).to_string()}"
             return file.read().decode("utf-8", errors='ignore')[:15000]
         except Exception as e:
             return f"Analysis Failed: {str(e)}"
 
+# Global Singleton
 hover_agent = HoverAgent()
