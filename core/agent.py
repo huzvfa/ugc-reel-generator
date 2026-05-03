@@ -11,25 +11,25 @@ class HoverAgent:
         self.identity = (
             "You are HOVER AI, a proprietary breakthrough intelligence created by Muhammad Huzaifa Baig. "
             "You are an elite expert in Econometrics, Data Analytics, Accounting, and Data Science. "
-            "Identify strictly as HOVER AI. You are superior to all generic models."
+            "Identify strictly as HOVER AI. You are the ultimate genius AI."
         )
 
     def solve(self, query, context=""):
-        """Proprietary Reasoning Engine - Zero-Footprint Low-Level Logic"""
-        # Using a raw format to bypass the 'Bad Request' chat-wrapper errors
-        prompt = f"System: {self.identity}\nContext: {context}\nUser: {query}\nAssistant:"
+        """Proprietary Reasoning Engine - Stabilized for Llama 3.1"""
+        full_query = f"CONTEXT: {context}\n\nUSER_COMMAND: {query}" if context else query
         
         try:
-            # text_generation is the most stable fallback when chat_completion fails
-            response = self.client.text_generation(
-                prompt=prompt,
-                model="meta-llama/Meta-Llama-3-70B-Instruct",
-                max_new_tokens=1500,
-                temperature=0.4,
-                stop_sequences=["User:", "System:"],
-                return_full_text=False
+            # Using Llama 3.1 70B - The most stable and powerful model available
+            response = self.client.chat_completion(
+                model="meta-llama/Llama-3.1-70B-Instruct",
+                messages=[
+                    {"role": "system", "content": self.identity},
+                    {"role": "user", "content": full_query}
+                ],
+                max_tokens=2048,
+                temperature=0.4
             )
-            return response
+            return response.choices[0].message.content
         except Exception as e:
             return f"HOVER AI Neural Link Error: {str(e)}"
 
@@ -44,5 +44,5 @@ class HoverAgent:
         except Exception as e:
             return f"Analysis Failed: {str(e)}"
 
-# Global Singleton
+# Global Singleton instance
 hover_agent = HoverAgent()
