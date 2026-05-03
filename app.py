@@ -6,15 +6,13 @@ from core import generator
 
 st.set_page_config(page_title="HOVER AI STUDIO", layout="wide")
 
-# --- NEON CHAT STYLING ---
+# --- NEON GLOW UI ---
 st.markdown("""
     <style>
     .stApp { background: #010101; color: #fff; }
-    /* Pulsing Neural Line */
-    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; box-shadow: 0 0 15px #00f2fe; } 100% { opacity: 0.5; } }
-    .thinking-line { height: 2px; width: 100%; background: #00f2fe; animation: pulse 1s infinite; margin: 10px 0; }
-    /* Compact File Uploader Style */
-    .stFileUploader { padding: 0 !important; }
+    /* Neural Activity Animation */
+    @keyframes neural-glow { 0% { box-shadow: 0 0 5px #00f2fe; } 50% { box-shadow: 0 0 20px #00f2fe; } 100% { box-shadow: 0 0 5px #00f2fe; } }
+    .thinking-line { height: 2px; width: 100%; background: #00f2fe; animation: neural-glow 1.5s infinite; margin: 10px 0; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -22,30 +20,27 @@ with st.sidebar:
     st.markdown("<h1 style='color:#00f2fe;'>💠 HOVER AI</h1>", unsafe_allow_html=True)
     mode = st.radio("Switch Module", ["Neural Chat", "UGC Studio"])
 
-# --- MODULE: NEURAL CHAT ---
 if mode == "Neural Chat":
     st.header("Proprietary Neural Link")
     
-    # Display History
+    # Message Display
     if "messages" not in st.session_state: st.session_state.messages = []
     for m in st.session_state.messages:
         with st.chat_message(m["role"]): st.write(m["content"])
 
-    # UNIFIED INPUT AREA
+    # --- UNIFIED COMMAND BAR ---
     st.divider()
-    btn_col, input_col = st.columns([0.07, 0.93])
+    btn_col, input_col = st.columns([0.1, 0.9])
     
     with btn_col:
-        # Attachment icon sitting right next to the chat box
+        # Attachment icon integrated next to chat
         doc = st.file_uploader("📎", type=None, label_visibility="collapsed")
     
     with input_col:
         q = st.chat_input("Command HOVER AI...")
 
     if q:
-        # Process context if a file is attached
         context = hover_agent.analyze_deep(doc) if doc else ""
-        
         st.session_state.messages.append({"role": "user", "content": q})
         with st.chat_message("user"): st.write(q)
         
@@ -55,8 +50,6 @@ if mode == "Neural Chat":
             st.write(res)
             st.session_state.messages.append({"role": "assistant", "content": res})
 
-# --- MODULE: UGC STUDIO ---
 elif mode == "UGC Studio":
-    # (Existing UGC Studio logic remains, ensuring generator.hover_visual_gen is called correctly)
     st.header("Hover Production Suite")
-    # ... Rest of your Studio code ...
+    # Your existing generation logic goes here, ensuring generator.hover_visual_gen is used.
