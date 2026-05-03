@@ -1,131 +1,53 @@
 import streamlit as st
 import asyncio
 from core import generator
-import os
 
-st.set_page_config(page_title="UGC AI Suite", layout="wide")
+st.set_page_config(page_title="UGC AI Pro", layout="wide")
 
-# --- GLASSMORPHISM & ANIMATION CSS ---
-st.markdown("""
-    <style>
-    /* Background Gradient */
-    .stApp {
-        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-        color: white;
-    }
-    
-    /* Glassmorphism Container */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        margin-bottom: 25px;
-    }
+# --- EXPANDED VOICE LIBRARY ---
+# Note: Styles like 'Seductive' are mapped to 'Whispering/Soft'
+VOICES = {
+    "USA - Professional (Male)": "en-US-GuyNeural",
+    "USA - Energetic (Female)": "en-US-AnaNeural",
+    "UK - Elegant (Female)": "en-GB-SoniaNeural",
+    "UK - Serious (Male)": "en-GB-RyanNeural",
+    "Pakistani - English Accent (Male)": "en-PK-AsadNeural",
+    "Indian - Soft (Female)": "en-IN-NeerjaNeural",
+    "German - Deep (Male)": "de-DE-ConradNeural",
+    "Urdu - Mature (Male)": "ur-PK-AsadNeural",
+    "Urdu - Sweet (Female)": "ur-PK-UzmaNeural"
+}
 
-    /* Typing Animation for Textarea */
-    @keyframes typing {
-      from { width: 0 }
-      to { width: 100% }
-    }
-    
-    .stTextArea textarea {
-        background: rgba(255, 255, 255, 0.03) !important;
-        color: #00f2fe !important;
-        border: 1px solid #4facfe !important;
-        transition: 0.3s;
-    }
-    
-    .stTextArea textarea:focus {
-        box-shadow: 0 0 15px #00f2fe;
-        background: rgba(255, 255, 255, 0.08) !important;
-    }
+st.title("🎬 Pro UGC AI Studio")
 
-    /* Custom Button */
-    .stButton>button {
-        background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
-        border: none;
-        color: white;
-        font-weight: bold;
-        border-radius: 12px;
-        padding: 10px 30px;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# Glassmorphism CSS (Simplified for speed)
+st.markdown("<style>.stTextArea textarea { border: 2px solid #00f2fe; }</style>", unsafe_allow_html=True)
 
-st.title("🚀 UGC AI Glossy Suite")
-st.markdown("Create professional reels with advanced AI voices.")
+mode = st.radio("Mode:", ["Image-to-Video", "Text-to-Video"])
+prompt = st.text_area("Describe the MOTION you want (e.g., 'The woman smiles and waves'):")
 
-# --- 1. MODE SELECTION ---
-mode = st.radio("Select Mode:", ["Text-to-Image", "Image-to-Image", "Text-to-Video", "Image-to-Video"], horizontal=True)
-
-# --- 2. CONFIGURATION ---
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-
-if "Image-" in mode:
-    uploaded_file = st.file_uploader("Upload Sample Image", type=["jpg", "png", "jpeg"])
-else:
-    uploaded_file = None
-
-prompt = st.text_area("Describe your AI Scenario:", placeholder="A young entrepreneur working in a modern office in Islamabad...", help="Type your creative vision here.")
-
-# Conditional UI for Video
 if "Video" in mode:
-    st.markdown("---")
     col1, col2 = st.columns(2)
-    
     with col1:
-        video_duration = st.slider("Video Length (Seconds):", 5, 30, 15)
-        add_voiceover = st.toggle("Enable AI Voiceover", value=True)
-        
+        add_voice = st.toggle("Add Voiceover", value=True)
+        video_len = st.slider("Length:", 5, 30, 10)
     with col2:
-        if add_voiceover:
-            script = st.text_area("Script:", "Hey everyone, welcome to my creative space!")
-            
-            # EXPANDED VOICE LIBRARY
-            voice_options = {
-                "Young Adult (Female)": "en-US-AnaNeural",
-                "Young Adult (Male)": "en-US-ChristopherNeural",
-                "Adult (Female)": "en-US-JennyNeural",
-                "Adult (Male)": "en-US-GuyNeural",
-                "Elderly (Female)": "en-US-CoraNeural",
-                "Elderly (Male)": "en-US-RogerNeural",
-                "British Professional (Male)": "en-GB-RyanNeural"
-            }
-            selected_voice = st.selectbox("Select Voice Agent:", list(voice_options.keys()))
-            
-            if st.button("🔊 Preview Voice"):
-                with st.spinner("Wait..."):
-                    p_path = asyncio.run(generator.generate_voice("This is a preview of your selected AI agent.", voice_options[selected_voice], "output/p.mp3"))
-                    st.audio(p_path)
+        if add_voice:
+            script = st.text_area("Script (Voice won't play without this):")
+            voice_choice = st.selectbox("Voice & Accent:", list(VOICES.keys()))
+            style = st.selectbox("Talking Style:", ["Calm", "Serious", "Angry", "Soft/Seductive", "Party", "Kid"])
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# --- 3. GENERATION ---
-if st.button("🚀 Generate Final Content"):
-    with st.spinner("AI Processing..."):
-        # Image Logic
-        if "Image-" in mode and uploaded_file:
-            img_path = generator.query_im2im_gen(uploaded_file, prompt)
-        else:
-            img_path = generator.query_image_gen(prompt)
-            
-        # Video/Audio Logic
-        if "Video" in mode:
-            audio_path = None
-            if add_voiceover:
-                audio_path = asyncio.run(generator.generate_voice(script, voice_options[selected_voice], "output/final.mp3"))
-            
-            video_path = generator.create_ugc_video(img_path, audio_path, video_duration)
-            if video_path:
-                st.video(video_path)
-        else:
-            st.image(img_path)
+if st.button("🚀 Generate Motion Reel"):
+    with st.spinner("Step 1: Generating Image..."):
+        img_path = generator.query_image_gen(prompt)
+    
+    with st.spinner("Step 2: Generating AI Motion..."):
+        motion_path = generator.query_video_gen(img_path, prompt)
+        # If API is busy, it falls back to zoom in generator logic
+    
+    if add_voice and script:
+        with st.spinner("Step 3: Synthesizing Voice..."):
+            audio_path = asyncio.run(generator.generate_voice(script, VOICES[voice_choice]))
+        
+        final_video = generator.assemble_final_reel(motion_path, audio_path, video_len)
+        st.video(final_video)
