@@ -6,7 +6,21 @@ import subprocess
 
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
-def hover_generate_video(prompt, base_img, duration):
+def hover_visual_gen(prompt, mode, u1=None):
+    """HOVER AI Vision: Capable of generating anything."""
+    if not os.path.exists("output"): os.makedirs("output")
+    path = os.path.abspath("output/hover_vision.png")
+    
+    if mode == "Image-to-Image" and u1:
+        img = client.image_to_image(image=u1.getvalue(), prompt=prompt, model="lllyasviel/control_v11p_sd15_canny")
+    else:
+        # Superior Image Engine
+        img = client.text_to_image(f"{prompt}, high quality, realistic", model="black-forest-labs/FLUX.1-schnell")
+    
+    img.save(path)
+    return path
+
+def hover_video_gen(prompt, base_img, duration):
     """Deep synthesis for true AI motion reels."""
     if not os.path.exists("output"): os.makedirs("output")
     final_path = os.path.abspath("output/hover_final.mp4")
@@ -14,7 +28,6 @@ def hover_generate_video(prompt, base_img, duration):
     try:
         with open(base_img, "rb") as f:
             img_data = f.read()
-        # High-motion synthesis
         video_bytes = client.image_to_video(img_data, model="stabilityai/stable-video-diffusion-img2vid-xt")
         
         temp_v = os.path.abspath("output/temp_v.mp4")
@@ -31,3 +44,10 @@ def hover_generate_video(prompt, base_img, duration):
         return final_path
     except:
         return None
+
+async def hover_voice_engine(text, voice, path):
+    """Neural speech synthesis for HOVER AI."""
+    if not os.path.exists("output"): os.makedirs("output")
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(path)
+    return os.path.abspath(path)
