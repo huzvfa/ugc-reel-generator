@@ -1,23 +1,22 @@
 import streamlit as st
 from huggingface_hub import InferenceClient
 import edge_tts
-import requests
 import os
 from PIL import Image
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
-# Initialize Client for standard tasks
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
-# --- 1. Text to Image (Flux Schnell) ---
 def query_image_gen(prompt):
+    # Flux is the best free model currently available
+    model_id = "black-forest-labs/FLUX.1-schnell"
     ugc_prompt = f"{prompt}, realistic UGC style, amateur smartphone photo, candid"
-    image = client.text_to_image(ugc_prompt, model="black-forest-labs/FLUX.1-schnell")
+    image = client.text_to_image(ugc_prompt, model=model_id)
     if not os.path.exists("output"): os.makedirs("output")
-    path = "output/t2i.png"
+    path = "output/base_image.png"
     image.save(path)
     return path
 
-# --- 2. Image to Image (ControlNet) ---
 def query_im2im_gen(uploaded_file, prompt):
     image_bytes = uploaded_file.getvalue()
     image = client.image_to_image(
@@ -26,36 +25,31 @@ def query_im2im_gen(uploaded_file, prompt):
         model="lllyasviel/control_v11p_sd15_canny" 
     )
     if not os.path.exists("output"): os.makedirs("output")
-    path = "output/i2i.png"
+    path = "output/base_image.png"
     image.save(path)
     return path
 
-# --- 3. Image to Video (The Robust Requests Fix) ---
-def query_video_gen(image_path):
-    API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-video-diffusion-img2vid-xt"
-    headers = {"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"}
-
+# --- NEW: 30-Second Video Engine (The "UGC Fix") ---
+def create_ugc_video(image_path, audio_path, duration):
     try:
-        with open(image_path, "rb") as f:
-            data = f.read()
+        # Load the generated AI image and voiceover
+        img_clip = ImageClip(image_path).set_duration(duration)
+        audio_clip = AudioFileClip(audio_path)
         
-        # We use raw requests to avoid InferenceClient version mismatches
-        response = requests.post(API_URL, headers=headers, data=data)
+        # Ensure audio and video length match
+        final_duration = min(duration, audio_clip.duration + 1)
+        video = img_clip.set_duration(final_duration).set_audio(audio_clip)
         
-        if response.status_code == 200:
-            if not os.path.exists("output"): os.makedirs("output")
-            video_path = "output/clip.mp4"
-            with open(video_path, "wb") as f:
-                f.write(response.content)
-            return video_path
-        else:
-            st.error(f"Video API Error {response.status_code}: {response.text}")
-            return None
+        # Apply a 'Ken Burns' effect (Slow Zoom) to make it feel like a video
+        video = video.resize(lambda t: 1 + 0.02 * t) # Subtle 2% zoom over time
+        
+        output_path = "output/final_reel.mp4"
+        video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac")
+        return output_path
     except Exception as e:
-        st.error(f"Video Generation Failed: {e}")
+        st.error(f"Video Rendering Error: {e}")
         return None
 
-# --- 4. Voiceover Agent ---
 async def generate_voice(text, voice, output_path="output/voice.mp3"):
     if not os.path.exists("output"): os.makedirs("output")
     communicate = edge_tts.Communicate(text, voice)
